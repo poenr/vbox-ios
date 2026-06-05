@@ -94,6 +94,54 @@ class SpiderManager: ObservableObject {
         if let spiderURL = config.spider, spiderURL.hasPrefix("http") {
             do {
                 let rawData = try await downloadRawData(url: spiderURL)
+                // 检查是否为纯 JS（jar 包会是二进制或 base64）
+                if let snippet = String(data: rawData, encoding: .utf8),
+                   snippet.count > 100,
+                   snippet.contains("function ") || snippet.contains("var ") || snippet.contains("let ") || snippet.contains("const ") {
+                    try await loadSpiderEngine(jsCode: snippet)
+                    spiderLoaded = true
+                    Logger().log("[SpiderManager] ✅ 远程蜘蛛加载成功")
+                } else {
+                    Logger().log("[SpiderManager] ⚠️ spider 不是纯 JS（jar 包），仅使用默认蜘蛛")
+                }
+            } catch {
+                Logger().log("[SpiderManager] ⚠️ spider URL 加载失败：\(error.localizedDescription)")
+            }
+        }
+        
+        // 2. 尝试加载每个站点的 ext 字段（如果是 JS 的话）
+        var extLoaded = 0
+        for site in allSites where site.key != "builtin" {
+            if let jsURL = site.ext, jsURL.hasPrefix("http"), !jsURL.isEmpty {
+                do {
+                    let rawData = try await downloadRawData(url: jsURL)
+                    if let snippet = String(data: rawData, encoding: .utf8),
+                       snippet.count > 200,
+                       snippet.contains("function ") || snippet.contains("spider") {
+                        try await loadSiteEngine(site: site, jsURL: jsURL)
+                        extLoaded += 1
+                    }
+                } catch { /* 静默跳过 */ }
+            }
+        }
+        
+        Logger().log("[SpiderManager] 引擎统计：default=\(engines["default"] != nil ? "✅" : "❌"), remote=\(spiderLoaded ? "✅" : "❌"), ext=\(extLoaded) 个")
+        
+        if engines.isEmpty {
+            Logger().log("[SpiderManager] ⚠️ 没有任何蜘蛛引擎被加载！")
+        }
+        
+        await loadHomeData()
+    }
+        
+        self.allSites = config.sites
+        loadedSiteCount = allSites.count
+        
+        // 1. 尝试从订阅源的 spider 字段加载 JS 蜘蛛
+        var spiderLoaded = false
+        if let spiderURL = config.spider, spiderURL.hasPrefix("http") {
+            do {
+                let rawData = try await downloadRawData(url: spiderURL)
                 if let snippet = String(data: rawData, encoding: .utf8),
                    snippet.count > 100,
                    snippet.contains("function ") || snippet.contains("var ") || snippet.contains("let ") || snippet.contains("const ") {
@@ -213,11 +261,28 @@ class SpiderManager: ObservableObject {
     }
     
     func search(keyword: String, pg: Int = 1) async -> [VodItem] {
-        // 当 QuickJS 引擎没加载，直接走原生搜索
-        if engines.isEmpty {
-            Logger().log("[SpiderManager] QuickJS 引擎未加载，走纯 Swift 搜索")
-            return await nativeSearch(keyword: keyword)
+        // 1. 优先使用已加载的蜘蛛引擎（包括 default）
+        if !engines.isEmpty {
+            var all: [VodItem] = []
+            for (_, engine) in engines {
+                do {
+                    if let items = try engine.callSearchContent(keyword: keyword, pg: pg).list {
+                        all.append(contentsOf: items)
+                    }
+                } catch {
+                    Logger().log("[SpiderManager] 搜索引擎错误：\(error.localizedDescription)")
+                    continue
+                }
+            }
+            if !all.isEmpty {
+                return all
+            }
         }
+        
+        // 2. 如果蜘蛛引擎没有结果，走原生搜索兜底
+        Logger().log("[SpiderManager] 引擎搜索无结果，使用原生搜索")
+        return await nativeSearch(keyword: keyword)
+    }
         
         var all: [VodItem] = []
         for (_, engine) in engines {
