@@ -106,6 +106,21 @@ class QJSSpiderEngine {
         return try JSONDecoder().decode(HomeContentResult.self, from: data)
     }
     
+    /// 分类内容
+    func callCategoryContent(tid: String, pg: Int, extend: [String: String] = [:]) throws -> CategoryContentResult {
+        var extendDict: [String: String] = [:]
+        for (key, value) in extend {
+            extendDict[key] = value
+        }
+        let extendJSON = try? JSONSerialization.data(withJSONObject: extendDict)
+        let extendStr = extendJSON != nil ? String(data: extendJSON!, encoding: .utf8) ?? "{}" : "{}"
+        let json = try callSpiderAPI("categoryContent", args: [tid, "\(pg)", extendStr])
+        guard let data = json.data(using: .utf8) else {
+            throw QJSError(message: "categoryContent 返回数据解析失败")
+        }
+        return try JSONDecoder().decode(CategoryContentResult.self, from: data)
+    }
+    
     /// 搜索
     func callSearchContent(keyword: String, pg: Int = 1) throws -> SearchContentResult {
         let json = try callSpiderAPI("searchContent", args: [keyword, "\(pg)"])

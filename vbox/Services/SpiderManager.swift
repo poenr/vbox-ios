@@ -30,10 +30,41 @@ class SpiderManager: ObservableObject {
         guard !isInitialized else { return }
         isInitialized = true
         
-        // 如果有已保存的订阅源，则加载
+        // 1. 加载默认测试蜘蛛（用于演示和调试）
+        await loadDefaultSpider()
+        
+        // 2. 如果有已保存的订阅源，则加载
         if subManager.isLoaded {
             await loadSitesFromSubscription()
         }
+        
+        Logger().log("[SpiderManager] 初始化完成，站点数：\(subManager.config?.sites.count ?? 0), 引擎数：\(engines.count)")
+    }
+    
+    /// 加载默认测试蜘蛛
+    private func loadDefaultSpider() async {
+        guard let url = Bundle.main.url(forResource: "default_spider", withExtension: "js") else {
+            Logger().log("[SpiderManager] 默认蜘蛛文件不存在")
+            return
+        }
+        do {
+            let jsCode = try String(contentsOf: url, encoding: .utf8)
+            let engine = QJSSpiderEngine()
+            engine.onLog = { msg in Logger().log("[SpiderEngine] \(msg)") }
+            try engine.loadScript(jsCode)
+            if engine.registerSpider() {
+                engines["default"] = engine
+                if !subscribedSites.contains("default") {
+                    subscribedSites.append("default")
+                }
+                Logger().log("[SpiderManager] ✅ 默认蜘蛛已加载")
+            } else {
+                Logger().log("[SpiderManager] ❌ 默认蜘蛛注册失败")
+            }
+        } catch {
+            Logger().log("[SpiderManager] 默认蜘蛛加载失败：\(error.localizedDescription)")
+        }
+    }
         
         // QuickJS 引擎暂不强制加载，搜索时走 nativeSearch 兜底
         Logger().log("[SpiderManager] 初始化完成，站点数: \(subManager.config?.sites.count ?? 0)")
@@ -159,11 +190,30 @@ class SpiderManager: ObservableObject {
                 let result = try engine.callHomeContent()
                 self.categories = result.class ?? []
                 self.homeVideos = result.list ?? []
-                Logger().log("[SpiderManager] 首页: \(homeVideos.count)视频 \(categories.count)分类")
+                Logger().log("[SpiderManager] 首页：\(homeVideos.count)视频 \(categories.count)分类")
             } catch {
-                Logger().log("[SpiderManager] 首页失败: \(error.localizedDescription)")
+                Logger().log("[SpiderManager] 首页失败：\(error.localizedDescription)")
             }
         }
+    }
+    
+    func loadCategoryContent(tid: String, pg: Int = 1, extend: [String: String] = [:]) async -> [VodItem] {
+        guard !engines.isEmpty else {
+            Logger().log("[SpiderManager] 没有引擎，无法加载分类")
+            return []
+        }
+        var all: [VodItem] = []
+        for (_, engine) in engines {
+            do {
+                if let items = try engine.callCategoryContent(tid: tid, pg: pg, extend: extend).list {
+                    all.append(contentsOf: items)
+                }
+            } catch {
+                Logger().log("[SpiderManager] 分类加载失败：\(error.localizedDescription)")
+                continue
+            }
+        }
+        return all
     }
     
     func search(keyword: String, pg: Int = 1) async -> [VodItem] {
