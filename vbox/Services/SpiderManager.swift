@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import os.log
 
 /// 蜘蛛管理器 — 统一管理订阅源加载、蜘蛛引擎、数据获取
 @MainActor
@@ -35,7 +36,7 @@ class SpiderManager: ObservableObject {
         }
         
         // QuickJS 引擎暂不强制加载，搜索时走 nativeSearch 兜底
-        print("[SpiderManager] 初始化完成，站点数: \(subManager.config?.sites.count ?? 0)")
+        Logger().log("[SpiderManager] 初始化完成，站点数: \(subManager.config?.sites.count ?? 0)")
     }
     
     func loadSubscribeConfig(from url: String) async {
@@ -71,12 +72,12 @@ class SpiderManager: ObservableObject {
                    snippet.contains("function ") || snippet.contains("var ") || snippet.contains("let ") || snippet.contains("const ") {
                     try await loadSpiderEngine(jsCode: snippet)
                     spiderLoaded = true
-                    print("[SpiderManager] ✅ 远程蜘蛛加载成功")
+                    Logger().log("[SpiderManager] ✅ 远程蜘蛛加载成功")
                 } else {
-                    print("[SpiderManager] spider URL 不是纯 JS（可能是 jar 包），使用内置蜘蛛")
+                    Logger().log("[SpiderManager] spider URL 不是纯 JS（可能是 jar 包），使用内置蜘蛛")
                 }
             } catch {
-                print("[SpiderManager] spider URL 加载失败: \(error.localizedDescription)")
+                Logger().log("[SpiderManager] spider URL 加载失败: \(error.localizedDescription)")
             }
         }
         
@@ -97,14 +98,14 @@ class SpiderManager: ObservableObject {
             }
         }
         
-        print("[SpiderManager] 蜘蛛引擎: \(spiderLoaded ? "✅" : "❌"), 引擎数: \(engines.count)")
+        Logger().log("[SpiderManager] 蜘蛛引擎: \(spiderLoaded ? "✅" : "❌"), 引擎数: \(engines.count)")
         await loadHomeData()
     }
     
     /// 加载蜘蛛 JS 到引擎
     private func loadSpiderEngine(jsCode: String) async throws {
         let engine = QJSSpiderEngine()
-        engine.onLog = { msg in print("[SpiderEngine] \(msg)") }
+        engine.onLog = { msg in Logger().log("[SpiderEngine] \(msg)") }
         try engine.loadScript(jsCode)
         if engine.registerSpider() {
             engines["builtin"] = engine
@@ -133,7 +134,7 @@ class SpiderManager: ObservableObject {
             if !subscribedSites.contains(site.key) {
                 subscribedSites.append(site.key)
             }
-            print("[SpiderManager] ✅ ext站点: \(site.name)")
+            Logger().log("[SpiderManager] ✅ ext站点: \(site.name)")
         }
     }
     
@@ -150,7 +151,7 @@ class SpiderManager: ObservableObject {
     
     func loadHomeData() async {
         guard !engines.isEmpty else {
-            print("[SpiderManager] 没有引擎，无法加载首页")
+            Logger().log("[SpiderManager] 没有引擎，无法加载首页")
             return
         }
         if let (_, engine) = engines.first {
@@ -158,9 +159,9 @@ class SpiderManager: ObservableObject {
                 let result = try engine.callHomeContent()
                 self.categories = result.class ?? []
                 self.homeVideos = result.list ?? []
-                print("[SpiderManager] 首页: \(homeVideos.count)视频 \(categories.count)分类")
+                Logger().log("[SpiderManager] 首页: \(homeVideos.count)视频 \(categories.count)分类")
             } catch {
-                print("[SpiderManager] 首页失败: \(error.localizedDescription)")
+                Logger().log("[SpiderManager] 首页失败: \(error.localizedDescription)")
             }
         }
     }
@@ -168,7 +169,7 @@ class SpiderManager: ObservableObject {
     func search(keyword: String, pg: Int = 1) async -> [VodItem] {
         // 当 QuickJS 引擎没加载，直接走原生搜索
         if engines.isEmpty {
-            print("[SpiderManager] QuickJS 引擎未加载，走纯 Swift 搜索")
+            Logger().log("[SpiderManager] QuickJS 引擎未加载，走纯 Swift 搜索")
             return await nativeSearch(keyword: keyword)
         }
         
@@ -179,7 +180,7 @@ class SpiderManager: ObservableObject {
                     all.append(contentsOf: items)
                 }
             } catch {
-                print("[SpiderManager] 搜索引擎错误: \(error.localizedDescription)")
+                Logger().log("[SpiderManager] 搜索引擎错误: \(error.localizedDescription)")
                 continue
             }
         }
@@ -215,7 +216,7 @@ class SpiderManager: ObservableObject {
     func nativeSearch(keyword: String) async -> [VodItem] {
         let apiURL = "https://vbox.ltd/search?wd=\(keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? keyword)"
         guard let url = URL(string: apiURL) else { 
-            print("[SpiderManager] nativeSearch: URL 无效")
+            Logger().log("[SpiderManager] nativeSearch: URL 无效")
             return [] 
         }
         
@@ -229,7 +230,7 @@ class SpiderManager: ObservableObject {
             
             // 检查 HTTP 状态码
             if let httpResponse = response as? HTTPURLResponse {
-                print("[SpiderManager] nativeSearch: 状态码=\(httpResponse.statusCode)")
+                Logger().log("[SpiderManager] nativeSearch: 状态码=\(httpResponse.statusCode)")
                 if httpResponse.statusCode != 200 {
                     return []
                 }
@@ -242,18 +243,18 @@ class SpiderManager: ObservableObject {
                 
                 if let directList = json["list"] as? [[String: Any]] {
                     list = directList
-                    print("[SpiderManager] 从 json['list'] 获得 \(list.count) 个结果")
+                    Logger().log("[SpiderManager] 从 json['list'] 获得 \(list.count) 个结果")
                 } else if let dataDict = json["data"] as? [String: Any],
                           let dataList = dataDict["list"] as? [[String: Any]] {
                     list = dataList
-                    print("[SpiderManager] 从 json['data']['list'] 获得 \(list.count) 个结果")
+                    Logger().log("[SpiderManager] 从 json['data']['list'] 获得 \(list.count) 个结果")
                 } else if let videos = json["videos"] as? [[String: Any]] {
                     list = videos
-                    print("[SpiderManager] 从 json['videos'] 获得 \(list.count) 个结果")
+                    Logger().log("[SpiderManager] 从 json['videos'] 获得 \(list.count) 个结果")
                 }
                 
                 if list.isEmpty {
-                    print("[SpiderManager] 未找到 list 字段，返回空结果")
+                    Logger().log("[SpiderManager] 未找到 list 字段，返回空结果")
                     return []
                 }
                 
@@ -277,21 +278,13 @@ class SpiderManager: ObservableObject {
                     )
                 }
                 
-                print("[SpiderManager] nativeSearch 解析成功: \(results.count) 个结果")
+                Logger().log("[SpiderManager] nativeSearch 解析成功: \(results.count) 个结果")
                 return results
             }
         } catch {
-            print("[SpiderManager] nativeSearch Worker 失败：\(error.localizedDescription)")
+            Logger().log("[SpiderManager] nativeSearch Worker 失败：\(error.localizedDescription)")
         }
         
-        return []
-    }
-                print("[SpiderManager] nativeSearch 从 Worker 获得 \(results.count) 个结果")
-                return results
-            }
-        } catch {
-            print("[SpiderManager] nativeSearch Worker 失败: \(error.localizedDescription)")
-        }
         return []
     }
 }
