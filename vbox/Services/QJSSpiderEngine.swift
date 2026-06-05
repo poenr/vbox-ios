@@ -54,13 +54,37 @@ class QJSSpiderEngine {
         onLog?("✅ 脚本加载完成 (\(script.count) 字符)")
     }
     
-    /// 注册蜘蛛
+    /// 注册蜘蛛 - 兼容两种命名 (spider / __JS_SPIDER__)
     func registerSpider() -> Bool {
-        let result = evaluateJS("""
-        if (typeof globalThis === 'undefined') { var globalThis = this; }
-        if (typeof globalThis.__JS_SPIDER__ !== 'undefined') { 'true'; } else { 'false'; }
+        // 先检查标准命名 spider
+        var result = evaluateJS("""
+        if (typeof spider !== 'undefined' && typeof spider.homeContent === 'function') {
+            if (typeof globalThis === 'undefined') { var globalThis = this; }
+            globalThis.__JS_SPIDER__ = spider;
+            'true';
+        } else {
+            'false';
+        }
         """)
-        return result?.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+        
+        if result?.trimmingCharacters(in: .whitespacesAndNewlines) == "true" {
+            onLog?("✅ 标准 spider 对象已注册到 globalThis.__JS_SPIDER__")
+            return true
+        }
+        
+        // 检查旧版命名 __JS_SPIDER__
+        result = evaluateJS("""
+        if (typeof globalThis === 'undefined') { var globalThis = this; }
+        if (typeof globalThis.__JS_SPIDER__ !== 'undefined' && typeof globalThis.__JS_SPIDER__.homeContent === 'function') { 'true'; } else { 'false'; }
+        """)
+        
+        let registered = result?.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+        if registered {
+            onLog?("✅ 已注册 __JS_SPIDER__ 对象")
+        } else {
+            onLog?("❌ 未找到有效的 spider 对象")
+        }
+        return registered
     }
     
     /// 调用蜘蛛 API
