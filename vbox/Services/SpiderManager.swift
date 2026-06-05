@@ -65,10 +65,6 @@ class SpiderManager: ObservableObject {
             Logger().log("[SpiderManager] 默认蜘蛛加载失败：\(error.localizedDescription)")
         }
     }
-        
-        // QuickJS 引擎暂不强制加载，搜索时走 nativeSearch 兜底
-        Logger().log("[SpiderManager] 初始化完成，站点数: \(subManager.config?.sites.count ?? 0)")
-    }
     
     func loadSubscribeConfig(from url: String) async {
         isLoading = true
