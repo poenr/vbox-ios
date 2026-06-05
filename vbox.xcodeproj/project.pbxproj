@@ -309,8 +309,6 @@
 			};
 			name = Debug;
 		};
-			name = Debug;
-		};
 		D10004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
