@@ -20,7 +20,7 @@
 		A10013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10013 /* Assets.xcassets */; };
 		A10011 /* QJSSpiderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10011 /* QJSSpiderEngine.swift */; };
 		A10012 /* QuickJSBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = B10012 /* QuickJSBridge.m */; };
-		A10013 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10015 /* SubscriptionManager.swift */; };
+		A10021 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10015 /* SubscriptionManager.swift */; };
 		A10014 /* CloudDriveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10016 /* CloudDriveManager.swift */; };
 		A10015 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10013 /* Assets.xcassets */; };
 		A10016 /* libquickjs.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B10017 /* libquickjs.a */; };
@@ -203,7 +203,7 @@
 				A10010 /* SettingsViews.swift in Sources */,
 				A10011 /* QJSSpiderEngine.swift in Sources */,
 				A10012 /* QuickJSBridge.m in Sources */,
-				A10013 /* SubscriptionManager.swift in Sources */,
+				A10021 /* SubscriptionManager.swift in Sources */,
 				A10014 /* CloudDriveManager.swift in Sources */,
 				A10017 /* SpiderManager.swift in Sources */,
 				A10019 /* UpdateSheet.swift in Sources */,
