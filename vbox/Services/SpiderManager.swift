@@ -214,23 +214,78 @@ class SpiderManager: ObservableObject {
     /// 纯 Swift 搜索实现 — 走 vbox.ltd Worker 搜索接口
     func nativeSearch(keyword: String) async -> [VodItem] {
         let apiURL = "https://vbox.ltd/search?wd=\(keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? keyword)"
-        guard let url = URL(string: apiURL) else { return [] }
+        guard let url = URL(string: apiURL) else { 
+            print("[SpiderManager] nativeSearch: URL 无效")
+            return [] 
+        }
         
         var req = URLRequest(url: url)
         req.timeoutInterval = 15
-        req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
         
         do {
-            let (data, _) = try await URLSession.shared.data(for: req)
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let list = json["list"] as? [[String: Any]] {
-                let results = list.map { item in
-                    VodItem(
-                        vodId: String(describing: item["vod_id"] ?? ""),
-                        vodName: (item["vod_name"] as? String) ?? "",
-                        vodPic: (item["vod_pic"] as? String) ?? ""
+            let (data, response) = try await URLSession.shared.data(for: req)
+            
+            // 检查 HTTP 状态码
+            if let httpResponse = response as? HTTPURLResponse {
+                print("[SpiderManager] nativeSearch: 状态码=\(httpResponse.statusCode)")
+                if httpResponse.statusCode != 200 {
+                    return []
+                }
+            }
+            
+            // 尝试解析 JSON
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                // 尝试多种可能的 list 路径
+                var list: [[String: Any]] = []
+                
+                if let directList = json["list"] as? [[String: Any]] {
+                    list = directList
+                    print("[SpiderManager] 从 json['list'] 获得 \(list.count) 个结果")
+                } else if let dataDict = json["data"] as? [String: Any],
+                          let dataList = dataDict["list"] as? [[String: Any]] {
+                    list = dataList
+                    print("[SpiderManager] 从 json['data']['list'] 获得 \(list.count) 个结果")
+                } else if let videos = json["videos"] as? [[String: Any]] {
+                    list = videos
+                    print("[SpiderManager] 从 json['videos'] 获得 \(list.count) 个结果")
+                }
+                
+                if list.isEmpty {
+                    print("[SpiderManager] 未找到 list 字段，返回空结果")
+                    return []
+                }
+                
+                let results = list.compactMap { item -> VodItem? in
+                    guard let vodId = item["vod_id"] else { return nil }
+                    let vodIdStr = String(describing: vodId)
+                    let vodName = (item["vod_name"] as? String) ?? ""
+                    let vodPic = (item["vod_pic"] as? String) ?? ""
+                    let vodRemarks = (item["vod_remarks"] as? String) ?? (item["vod_note"] as? String)
+                    let vodYear = (item["vod_year"] as? String)
+                    
+                    // 过滤空结果
+                    if vodName.isEmpty { return nil }
+                    
+                    return VodItem(
+                        vodId: vodIdStr,
+                        vodName: vodName,
+                        vodPic: vodPic,
+                        vodRemarks: vodRemarks,
+                        vodYear: vodYear
                     )
                 }
+                
+                print("[SpiderManager] nativeSearch 解析成功: \(results.count) 个结果")
+                return results
+            }
+        } catch {
+            print("[SpiderManager] nativeSearch Worker 失败：\(error.localizedDescription)")
+        }
+        
+        return []
+    }
                 print("[SpiderManager] nativeSearch 从 Worker 获得 \(results.count) 个结果")
                 return results
             }
