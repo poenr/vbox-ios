@@ -38,7 +38,7 @@ class SpiderManager: ObservableObject {
             await loadSitesFromSubscription()
         }
         
-        Logger().log("[SpiderManager] 初始化完成，站点数：\(subManager.config?.sites.count ?? 0), 引擎数：\(engines.count)")
+        Logger().log("[SpiderManager] 初始化完成，站点数：\(self.subManager.config?.sites.count ?? 0), 引擎数：\(self.engines.count)")
     }
     
     /// 加载默认测试蜘蛛
@@ -125,7 +125,7 @@ class SpiderManager: ObservableObject {
             }
         }
         
-        Logger().log("[SpiderManager] 蜘蛛引擎: \(spiderLoaded ? "✅" : "❌"), 引擎数: \(engines.count)")
+        Logger().log("[SpiderManager] 蜘蛛引擎: \(spiderLoaded ? "✅" : "❌"), 引擎数: \(self.engines.count)")
         await loadHomeData()
     }
     
@@ -186,7 +186,7 @@ class SpiderManager: ObservableObject {
                 let result = try engine.callHomeContent()
                 self.categories = result.class ?? []
                 self.homeVideos = result.list ?? []
-                Logger().log("[SpiderManager] 首页：\(homeVideos.count)视频 \(categories.count)分类")
+                Logger().log("[SpiderManager] 首页：\(self.homeVideos.count)视频 \(self.categories.count)分类")
             } catch {
                 Logger().log("[SpiderManager] 首页失败：\(error.localizedDescription)")
             }
