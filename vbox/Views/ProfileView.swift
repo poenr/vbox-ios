@@ -1,5 +1,5 @@
 import SwiftUI
-import PhotosUI
+import UIKit
 
 // MARK: - ProfileView
 
@@ -9,7 +9,6 @@ struct ProfileView: View {
     @State private var username: String = ""
     @State private var avatarImage: Image? = nil
     @State private var showLoginSheet: Bool = false
-    @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var showPhotoPicker: Bool = false
     @State private var historyRecords: [HistoryRecord] = []
     @State private var showWatchHistory: Bool = false
@@ -80,9 +79,6 @@ struct ProfileView: View {
                 NavigationView {
                     DownloadView()
                 }
-            }
-            .onChange(of: selectedPhotoItem) { _ in
-                handlePhotoSelection()
             }
             .onChange(of: settings.welfareEnabled) { newValue in
                 reloadHistory()
@@ -167,7 +163,11 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 20)
-        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+        .sheet(isPresented: $showPhotoPicker) {
+            ImagePickerSheet { image in
+                handlePhotoSelection(image)
+            }
+        }
     }
 
     // MARK: - 观看记录模块
@@ -481,20 +481,13 @@ struct ProfileView: View {
         historyRecords = Array(allHistory.prefix(20))
     }
 
-    private func handlePhotoSelection() {
-        guard let item = selectedPhotoItem else { return }
-        item.loadTransferable(type: Data.self) { result in
-            DispatchQueue.main.async {
-                if case .success(let data) = result, let data = data, let uiImage = UIImage(data: data) {
-                    // 压缩并持久化头像
-                    let resized = Self.resizeImage(uiImage, maxSide: 200)
-                    avatarImage = Image(uiImage: resized)
-                    if let pngData = resized.pngData() {
-                        let base64 = pngData.base64EncodedString()
-                        DatabaseManager.shared.setSetting(key: "avatar_image", value: base64)
-                    }
-                }
-            }
+    private func handlePhotoSelection(_ uiImage: UIImage) {
+        // 压缩并持久化头像
+        let resized = Self.resizeImage(uiImage, maxSide: 200)
+        avatarImage = Image(uiImage: resized)
+        if let pngData = resized.pngData() {
+            let base64 = pngData.base64EncodedString()
+            DatabaseManager.shared.setSetting(key: "avatar_image", value: base64)
         }
     }
 
@@ -814,11 +807,9 @@ struct WatchHistoryView: View {
             }
         }
         .listStyle(PlainListStyle())
-        .scrollContentBackground(.hidden)
         .background(Color.clear)
         .navigationTitle("观看记录")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(settings.usesVisualSkin ? .dark : nil, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -830,17 +821,16 @@ struct WatchHistoryView: View {
                 .buttonStyle(.plain)
             }
 
-            if !historyRecords.isEmpty {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        DatabaseManager.shared.clearHistory()
-                        historyRecords = []
-                    }) {
-                        Text("清空")
-                            .foregroundColor(accentColor)
-                    }
-                    .buttonStyle(.plain)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    DatabaseManager.shared.clearHistory()
+                    historyRecords = []
+                }) {
+                    Text("清空")
+                        .foregroundColor(accentColor)
                 }
+                .buttonStyle(.plain)
+                .disabled(historyRecords.isEmpty)
             }
         }
         .onAppear {
@@ -968,11 +958,9 @@ struct FavoriteView: View {
             }
         }
         .listStyle(PlainListStyle())
-        .scrollContentBackground(.hidden)
         .background(Color.clear)
         .navigationTitle("我的收藏")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(settings.usesVisualSkin ? .dark : nil, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -1096,11 +1084,9 @@ struct DownloadView: View {
             }
         }
         .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .background(Color.clear)
         .navigationTitle("下载管理")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(settings.usesVisualSkin ? .dark : nil, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {

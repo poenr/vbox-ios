@@ -421,7 +421,6 @@ struct VideoDetailView: View {
                     showEpisodeSheet = false
                 }
             )
-            .presentationDragIndicator(.visible)
         }
         .onAppear {
             initializeSources()

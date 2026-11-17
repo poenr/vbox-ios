@@ -20,13 +20,29 @@ extension Notification.Name {
 }
 
 // 屏幕方向辅助类
+
+/// iOS 15 兼容的方向更新封装。
+/// iOS 16.0+ 用 requestGeometryUpdate(_:errorHandler:) 的新签名，
+/// iOS 15 用已弃用但可用的 requestGeometryUpdate(_:)。
+extension UIWindowScene {
+    func vboxRequestGeometryUpdate(_ mask: UIInterfaceOrientationMask) {
+        if #available(iOS 16.0, *) {
+            requestGeometryUpdate(.iOS(interfaceOrientations: mask))
+        } else {
+            requestGeometryUpdate(mask)
+        }
+    }
+}
+
 class OrientationHelper {
     static var currentOrientationMask: UIInterfaceOrientationMask = .all
 
     static func lockOrientation(_ orientation: UIInterfaceOrientationMask) {
         currentOrientationMask = orientation
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: orientation))
+            // requestGeometryUpdate(_:errorHandler:) 是 iOS 16.0+ 的新签名，
+            // iOS 15 只有已弃用但可用的 requestGeometryUpdate(_:)。
+            windowScene.vboxRequestGeometryUpdate(orientation)
             // 根据当前设备方向决定锁定哪个横屏方向
             let currentDeviceOrientation = UIDevice.current.orientation
             let targetOrientation: UIInterfaceOrientation
@@ -47,7 +63,7 @@ class OrientationHelper {
     static func unlockOrientation() {
         currentOrientationMask = [.portrait, .landscapeLeft, .landscapeRight]
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: [.portrait, .landscapeLeft, .landscapeRight]))
+            windowScene.vboxRequestGeometryUpdate([.portrait, .landscapeLeft, .landscapeRight])
         }
     }
 
@@ -68,7 +84,7 @@ class OrientationHelper {
         UIDevice.current.setValue(targetOrientation.rawValue, forKey: "orientation")
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
             let mask: UIInterfaceOrientationMask = (targetOrientation == .landscapeLeft) ? .landscapeLeft : .landscapeRight
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
+            windowScene.vboxRequestGeometryUpdate(mask)
         }
         UINavigationController.attemptRotationToDeviceOrientation()
     }
@@ -77,7 +93,7 @@ class OrientationHelper {
     static func allowAllOrientations() {
         currentOrientationMask = [.portrait, .landscapeLeft, .landscapeRight]
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: [.portrait, .landscapeLeft, .landscapeRight]))
+            windowScene.vboxRequestGeometryUpdate([.portrait, .landscapeLeft, .landscapeRight])
         }
     }
 }

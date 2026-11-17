@@ -2005,13 +2005,13 @@ struct FlowLayout16: Layout {
 // iOS 15 走下面的换行回退实现（视觉略有差异，功能等价）。
 struct FlowLayout: View {
     var spacing: CGFloat = 10
-    @ViewBuilder var content: () -> Content
+    var content: AnyView
 
     var body: some View {
         if #available(iOS 16.0, *) {
-            FlowLayout16(spacing: spacing) { content() }
+            FlowLayout16(spacing: spacing) { content }
         } else {
-            CompatFlowRows(spacing: spacing) { content() }
+            CompatFlowRows(spacing: spacing) { content }
         }
     }
 }
@@ -2021,7 +2021,7 @@ struct FlowLayout: View {
 /// 视觉上与流式布局接近，且不需要 iOS 16 的 Layout 协议。
 private struct CompatFlowRows: View {
     var spacing: CGFloat
-    @ViewBuilder var content: () -> Content
+    var content: AnyView
 
     var body: some View {
         LazyVGrid(
@@ -2030,7 +2030,7 @@ private struct CompatFlowRows: View {
             alignment: .leading,
             spacing: spacing
         ) {
-            content()
+            content
         }
     }
 }
