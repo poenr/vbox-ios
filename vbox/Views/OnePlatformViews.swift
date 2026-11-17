@@ -843,7 +843,7 @@ struct OneSettingsView: View {
 
             Section {
                 TextField("JWT Token（可选，手动覆盖）", text: $tokenInput)
-                    .lineLimit(3...6)
+                    .lineLimit(6)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 TextField("user-key（可选，手动覆盖）", text: $userKeyInput)

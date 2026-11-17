@@ -2011,7 +2011,7 @@ struct FlowLayout: View {
         if #available(iOS 16.0, *) {
             FlowLayout16(spacing: spacing) { content }
         } else {
-            CompatFlowRows(spacing: spacing) { content }
+            CompatFlowRows(spacing: spacing, content: content)
         }
     }
 }

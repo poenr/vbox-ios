@@ -972,21 +972,20 @@ struct FavoriteView: View {
                 .buttonStyle(.plain)
             }
 
-            if !favorites.isEmpty {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        for record in favorites {
-                            if let id = record.id {
-                                DatabaseManager.shared.removeFavorite(id: id)
-                            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    for record in favorites {
+                        if let id = record.id {
+                            DatabaseManager.shared.removeFavorite(id: id)
                         }
-                        favorites = []
-                    }) {
-                        Text("清空")
-                            .foregroundColor(accentColor)
                     }
-                    .buttonStyle(.plain)
+                    favorites = []
+                }) {
+                    Text("清空")
+                        .foregroundColor(accentColor)
                 }
+                .buttonStyle(.plain)
+                .disabled(favorites.isEmpty)
             }
         }
         .onAppear {
@@ -1097,16 +1096,15 @@ struct DownloadView: View {
                 }
                 .buttonStyle(.plain)
             }
-            if !downloadRecords.isEmpty {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("清空") {
-                        DatabaseManager.shared.clearDownloads()
-                        reloadDownloads()
-                    }
-                    .font(.system(size: 14))
-                    .foregroundColor(.red)
-                    .buttonStyle(.plain)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("清空") {
+                    DatabaseManager.shared.clearDownloads()
+                    reloadDownloads()
                 }
+                .font(.system(size: 14))
+                .foregroundColor(.red)
+                .buttonStyle(.plain)
+                .disabled(downloadRecords.isEmpty)
             }
         }
         .onAppear {

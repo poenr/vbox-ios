@@ -29,7 +29,17 @@ extension UIWindowScene {
         if #available(iOS 16.0, *) {
             requestGeometryUpdate(.iOS(interfaceOrientations: mask))
         } else {
-            requestGeometryUpdate(mask)
+            // iOS 15 没有 requestGeometryUpdate（它是 iOS 16 API），
+            // 用 KVC 设置设备方向（巨魔安装无 App Store 审核限制）。
+            let orientation: UIInterfaceOrientation
+            if mask.contains(.landscapeRight) {
+                orientation = .landscapeRight
+            } else if mask.contains(.landscapeLeft) {
+                orientation = .landscapeLeft
+            } else {
+                orientation = .portrait
+            }
+            UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
         }
     }
 }
