@@ -11,7 +11,7 @@ struct ShortDramaDetailView: View {
     @State private var playerDrama: VodItem?
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     coverInfoSection

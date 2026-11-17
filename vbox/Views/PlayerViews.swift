@@ -421,7 +421,6 @@ struct VideoDetailView: View {
                     showEpisodeSheet = false
                 }
             )
-            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .onAppear {

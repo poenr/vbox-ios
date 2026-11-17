@@ -316,11 +316,9 @@ struct LiveTVView: View {
                         showFileImporter = true
                     }
                 )
-                .presentationDetents([.medium])
             }
             .sheet(item: $selectedChannel) { channel in
                 LivePlayerSheet(channel: channel, service: service)
-                    .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showEPGSheet) {
                 if let channel = selectedChannelForEPG {

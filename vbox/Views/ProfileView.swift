@@ -423,7 +423,6 @@ struct ProfileView: View {
 
             Spacer()
         }
-        .presentationDetents([.medium])
         .sheet(isPresented: $showWelfareSettings) {
             NavigationView {
                 WelfareSettingsView()

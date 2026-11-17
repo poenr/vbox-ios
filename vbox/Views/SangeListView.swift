@@ -214,7 +214,6 @@ struct SangeListView: View {
         .background(Color.clear)
         .navigationTitle(subCategory.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear { viewModel.loadInitial() }
     }
 

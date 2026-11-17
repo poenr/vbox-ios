@@ -1947,7 +1947,7 @@ struct SiteRow: View {
 
 // MARK: - 流式布局
 @available(iOS 16.0, *)
-struct FlowLayout: Layout {
+struct FlowLayout16: Layout {
     var spacing: CGFloat = 10
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -1995,6 +1995,42 @@ struct FlowLayout: Layout {
         var subviews: [LayoutSubviews.Element] = []
         var height: CGFloat {
             subviews.map { $0.dimensions(in: .unspecified).height }.max() ?? 0
+        }
+    }
+}
+
+
+// MARK: - iOS 15 兼容包装
+// FlowLayout 依赖 iOS 16 的 Layout 协议；这里保留 iOS 16 实现，
+// iOS 15 走下面的换行回退实现（视觉略有差异，功能等价）。
+struct FlowLayout: View {
+    var spacing: CGFloat = 10
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if #available(iOS 16.0, *) {
+            FlowLayout16(spacing: spacing) { content() }
+        } else {
+            CompatFlowRows(spacing: spacing) { content() }
+        }
+    }
+}
+
+/// iOS 15 回退实现：用 LazyVGrid(iOS 14+) 做近似流式布局。
+/// LazyVGrid 的 GridItem(.flexible()) 会按容器宽度自动分配每行元素个数，
+/// 视觉上与流式布局接近，且不需要 iOS 16 的 Layout 协议。
+private struct CompatFlowRows: View {
+    var spacing: CGFloat
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: spacing),
+                      GridItem(.flexible(), spacing: spacing)],
+            alignment: .leading,
+            spacing: spacing
+        ) {
+            content()
         }
     }
 }

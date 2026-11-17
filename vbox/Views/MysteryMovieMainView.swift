@@ -47,7 +47,6 @@ struct MysteryMovieMainView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
         .background(Color.clear)
     }
 }
@@ -305,7 +304,6 @@ struct MysteryMoviePlayerView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear { loadDetail() }
         .fullScreenCover(isPresented: $showPlayer) {
             if let vod = vodItem { VideoDetailView(video: vod) }
